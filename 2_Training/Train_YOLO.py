@@ -67,7 +67,7 @@ YOLO_classname = os.path.join(Model_Folder, "data_classes.txt")
 
 log_dir = Model_Folder
 anchors_path = os.path.join(keras_path, "model_data", "yolo_anchors.txt")
-weights_path = os.path.join(keras_path, "yolo.h5")
+weights_path = os.path.join(log_dir, "trained_weights_stage_1.h5")
 
 FLAGS = None
 
@@ -157,6 +157,7 @@ if __name__ == "__main__":
             input_shape, anchors, num_classes, freeze_body=2, weights_path=weights_path
         )
     else:
+        print("USING WEIGHTS", weights_path)
         model = create_model(
             input_shape, anchors, num_classes, freeze_body=2, weights_path=weights_path
         )  # make sure you know what you freeze
@@ -188,7 +189,7 @@ if __name__ == "__main__":
 
     # Train with frozen layers first, to get a stable loss.
     # Adjust num epochs to your dataset. This step is enough to obtain a decent model.
-    if True:
+    if False:
         model.compile(
             optimizer=Adam(lr=1e-3),
             loss={
@@ -197,7 +198,7 @@ if __name__ == "__main__":
             },
         )
 
-        batch_size = 32
+        batch_size = 40
         print(
             "Train on {} samples, val on {} samples, with batch size {}.".format(
                 num_train, num_val, batch_size

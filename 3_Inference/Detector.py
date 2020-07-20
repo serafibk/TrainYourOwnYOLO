@@ -38,7 +38,7 @@ image_folder = os.path.join(data_folder, "Source_Images")
 
 image_test_folder = os.path.join(image_folder, "Test_Images")
 
-detection_results_folder = os.path.join(image_folder, "Test_Image_Detection_Results")
+detection_results_folder = os.path.join(image_folder, "Test_Image_Detection_Results/1000_result")
 detection_results_file = os.path.join(detection_results_folder, "Detection_Results.csv")
 
 model_folder = os.path.join(data_folder, "Model_Weights")
@@ -169,6 +169,9 @@ if __name__ == "__main__":
         os.makedirs(output_path)
 
     # define YOLO detector
+    print(FLAGS.model_path)
+    print(FLAGS.classes_path)
+    print(FLAGS.score)
     yolo = YOLO(
         **{
             "model_path": FLAGS.model_path,

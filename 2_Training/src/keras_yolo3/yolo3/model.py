@@ -262,6 +262,9 @@ def yolo_eval(
         boxes_.append(class_boxes)
         scores_.append(class_box_scores)
         classes_.append(classes)
+    print(boxes_)
+    print(scores_)
+    print(classes_)
     boxes_ = K.concatenate(boxes_, axis=0)
     scores_ = K.concatenate(scores_, axis=0)
     classes_ = K.concatenate(classes_, axis=0)
@@ -471,7 +474,7 @@ def yolo_loss(args, anchors, num_classes, ignore_thresh=0.5, print_loss=False):
             )
             return b + 1, ignore_mask
 
-        _, ignore_mask = K.control_flow_ops.while_loop(
+        _, ignore_mask = tf.while_loop(
             lambda b, *args: b < m, loop_body, [0, ignore_mask]
         )
         ignore_mask = ignore_mask.stack()

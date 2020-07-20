@@ -17,7 +17,10 @@ from .yolo3.model import yolo_eval, yolo_body, tiny_yolo_body
 from .yolo3.utils import letterbox_image
 import os
 from keras.utils import multi_gpu_model
+import tensorflow as tf
+import cv2
 
+tf.compat.v1.disable_eager_execution()
 
 class YOLO(object):
     _defaults = {
@@ -42,8 +45,9 @@ class YOLO(object):
         self.__dict__.update(kwargs)  # and update with user overrides
         self.class_names = self._get_class()
         self.anchors = self._get_anchors()
-        self.sess = K.get_session()
+        self.sess = tf.compat.v1.keras.backend.get_session()
         self.boxes, self.scores, self.classes = self.generate()
+
 
     def _get_class(self):
         classes_path = os.path.expanduser(self.classes_path)
