@@ -10,8 +10,8 @@ root_path = r"/Users/serafinakamp/Desktop/YOLO_test/TrainYourOwnYOLO/Data/Source
 root_xml = r"/Users/serafinakamp/Desktop/TableExt/datasheet-scrubber/src/Table_Extraction_Weight_Creation"
 
 
-image_folder = "Test_Image_Detection_Results/1000_result"
-xml_folder = "xml_bound_train"
+image_folder = "Test_Image_Detection_Results/1700_result"
+
 
 
 def calc_IoU(xml,proposed):
@@ -46,10 +46,19 @@ delta = 5
 tables_on_page = {}
 
 #to read csv
-with open(os.path.join(root_path,"Test_Image_Detection_Results/1000_result/Detection_Results.csv"),'r') as csvfile:
+with open(os.path.join(root_path,"Test_Image_Detection_Results/1700_result/Detection_Results.csv"),'r') as csvfile:
     reader = csv.reader(csvfile)
     for row in reader:
-        num = row[0][16:-4]
+        if row[0] == "image":
+            continue
+        if row[0][6] == 'b':
+            num = 'b'+row[0][16:-4]
+            im_name = "train_bound_img_"+num[1:]+"_catface.jpg"
+        else:
+            num = 'f'+row[0][15:-4]
+            im_name = "train_full_img_"+num[1:]+"_catface.jpg"
+        print(row[0])
+        print(num)
         if num: #exclude header row
             checking_table=True
             page_width = int(row[8])
@@ -79,12 +88,10 @@ with open(os.path.join(root_path,"Test_Image_Detection_Results/1000_result/Detec
                 elif prop[1] < confidence: #confidence is higher
                     tables_on_page[num].append([proposed,confidence])
                     del tables_on_page[num][found_ind]
-
-                    '''
                     top_left_over = (prop_overlap[0],prop_overlap[1])
                     bot_right_over = (prop_overlap[2],prop_overlap[3])
                     print("new table is more confident")
-                    im_name = "train_bound_img_"+num+"_catface.jpg"
+                    '''
                     image = cv2.imread(os.path.join(root_path,image_folder,im_name))
                     cv2.rectangle(image,top_left,bot_right,(0,255,0), 3)
                     cv2.rectangle(image,top_left_over,bot_right_over,(0,0,255), 3)
@@ -98,7 +105,7 @@ with open(os.path.join(root_path,"Test_Image_Detection_Results/1000_result/Detec
                     top_left_over = (prop_overlap[0],prop_overlap[1])
                     bot_right_over = (prop_overlap[2],prop_overlap[3])
                     print("overlap and less confident")
-                    im_name = "train_bound_img_"+num+"_catface.jpg"
+                    '''
                     image = cv2.imread(os.path.join(root_path,image_folder,im_name))
                     cv2.rectangle(image,top_left,bot_right,(0,0,255), 3)
                     cv2.rectangle(image,top_left_over,bot_right_over,(0,255,0), 3)
@@ -106,6 +113,8 @@ with open(os.path.join(root_path,"Test_Image_Detection_Results/1000_result/Detec
                     cv2.imshow("image",image)
                     cv2.waitKey(0)
                     cv2.destroyAllWindows()
+                    '''
+
             else:
                 tables_on_page[num] = [[proposed,confidence]]
 
@@ -114,7 +123,14 @@ for num in tables_on_page:
     for prop in tables_on_page[num]:
 
         ##get corresponding xml to calculate IoU score
-        xml_name = "train_bound_xml_"+num+".xml"
+        if num[0]=='b':
+            xml_name = "train_bound_xml_"+num[1:]+".xml"
+            im_name = "train_bound_img_"+num[1:]+"_catface.jpg"
+            xml_folder = "xml_bound_train"
+        else:
+            xml_name = "train_full_xml_"+num[1:]+".xml"
+            im_name = "train_full_img_"+num[1:]+"_catface.jpg"
+            xml_folder = "xml_full_train"
 
         maxIOU = 0 #find max of all tables in xml compared to proposed
 
@@ -145,10 +161,9 @@ for num in tables_on_page:
                 iou = calc_IoU(xml_locs,prop[0])
                 if iou > maxIOU:
                     maxIOU = iou
-        '''
         top_left = (prop[0][0],prop[0][1])
         bot_right = (prop[0][2],prop[0][3])
-        im_name = "train_bound_img_"+num+"_catface.jpg"
+        '''
         image = cv2.imread(os.path.join(root_path,image_folder,im_name))
         cv2.rectangle(image, top_left, bot_right, (255,0,0), 3)
         image = cv2.resize(image,(600,800))
@@ -157,10 +172,89 @@ for num in tables_on_page:
         cv2.destroyAllWindows()
         '''
 
+        #if maxIOU > threshold, correctly identifies table
+        if maxIOU > 0.6:
+
+            if maxIOU <= 0.7:
+                image = cv2.imread(os.path.join(root_path,image_folder,im_name))
+                top_left = (prop[0][0],prop[0][1])
+                bot_right = (prop[0][2],prop[0][3])
+                cv2.rectangle(image, top_left, bot_right, (255,0,0), 3)
+                image = cv2.resize(image,(600,800))
+                cv2.imshow("image",image)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+
+            correct_tables+=1
+        num_tables_prop+=1
+
+
+'''
+with open(os.path.join(root_path,"Test_Image_Detection_Results/1700_result/Detection_Results.csv"),'r') as csvfile:
+    reader = csv.reader(csvfile)
+    for row in reader:
+        if row[0] == "image":
+            continue
+        if row[0][6] == 'b':
+            num = row[0][16:-4]
+            im_name = "train_bound_img_"+num+"_catface.jpg"
+            xml_name = "train_bound_xml_"+num+".xml"
+            xml_folder = "xml_bound_train"
+        else:
+            num = row[0][15:-4]
+            im_name = "train_full_img_"+num+"_catface.jpg"
+            xml_name = "train_full_xml_"+num+".xml"
+            xml_folder = "xml_full_train"
+
+        page_width = int(row[8])
+        page_height = int(row[9])
+
+        proposed=[max(int(row[2])-delta,0),max(int(row[3])-delta,0),min(int(row[4])+delta,page_width),min(int(row[5])+delta,page_height)]#minX minY maxX maxY
+
+
+
+        maxIOU = 0 #find max of all tables in xml compared to proposed
+
+        #read in bounds
+        with open(os.path.join(root_xml,xml_folder,xml_name),'r') as xml:
+            tree = ET.parse(xml)
+
+            root = tree.getroot()
+            for table in root:
+                points = table[0].attrib["points"]
+
+                min_vals = [10000, 10000]
+                max_vals = [0,0]
+
+                on_X = True
+                temp = ""
+                for char in points:
+                    if(char == "," or char == " "):
+                        if(int(temp) < min_vals[not on_X]):
+                            min_vals[not on_X] = int(temp)
+                        if(int(temp) > max_vals[not on_X]):
+                            max_vals[not on_X] = int(temp)
+                        on_X = not on_X
+                        temp = ""
+                    else:
+                        temp += char
+                xml_locs = [min_vals[0],min_vals[1],max_vals[0],max_vals[1]]#minX minY maxX, maxY
+                iou = calc_IoU(xml_locs,proposed)
+                if iou > maxIOU:
+                    maxIOU = iou
+        top_left = (proposed[0],proposed[1])
+        bot_right = (proposed[2],proposed[3])
+        image = cv2.imread(os.path.join(root_path,image_folder,im_name))
+        cv2.rectangle(image, top_left, bot_right, (255,0,0), 3)
+        image = cv2.resize(image,(600,800))
+        cv2.imshow("image",image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+
 
         #if maxIOU > threshold, correctly identifies table
         if maxIOU > 0.7:
-            '''
             im_name = "train_bound_img_"+num+"_catface.jpg"
             image = cv2.imread(os.path.join(root_path,image_folder,im_name))
             top_left = (prop[0][0],prop[0][1])
@@ -170,15 +264,22 @@ for num in tables_on_page:
             cv2.imshow("image",image)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
-            '''
             correct_tables+=1
         num_tables_prop+=1
+'''
 
 #count ground truth tables
 num_tables_xml=0
 for img in images[1:]:
-    num = img[16:-12]
-    xml = "train_bound_xml_"+num+".xml"
+    if img[6] == 'b':
+        num = img[16:-12]
+        xml = "train_bound_xml_"+num+".xml"
+        xml_folder = "xml_bound_train"
+    else:
+        num = img[15:-12]
+        xml = "train_full_xml_"+num+".xml"
+        xml_folder = "xml_full_train"
+
     with open(os.path.join(root_xml,xml_folder,xml),'r') as xml:
         tree = ET.parse(xml)
 
