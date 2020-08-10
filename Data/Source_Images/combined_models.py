@@ -356,7 +356,7 @@ if __name__ == "__main__":
 
 
 
-
+###uncomment lines below to see detection results
 
             #cv2.rectangle(img,top_left,bot_right,(255,0,0),3)
 
