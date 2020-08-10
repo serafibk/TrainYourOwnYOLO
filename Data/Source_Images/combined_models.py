@@ -6,7 +6,26 @@ import numpy as np
 from keras.models import load_model
 import argparse
 import csv
+import xml.etree.ElementTree as ET
 
+
+def get_coordinates(points):
+    min_vals = [10000, 10000]
+    max_vals = [0,0]
+
+    on_X = True
+    temp = ""
+    for char in points:
+        if(char == "," or char == " "):
+            if(int(temp) < min_vals[not on_X]):
+                min_vals[not on_X] = int(temp)
+            if(int(temp) > max_vals[not on_X]):
+                max_vals[not on_X] = int(temp)
+            on_X = not on_X
+            temp = ""
+        else:
+            temp += char
+    return [min_vals[0],min_vals[1],max_vals[0],max_vals[1]]#minX minY maxX, maxY
 
 ##calculate the IoU between two regions
 def calc_IoU(xml,proposed):
@@ -215,12 +234,19 @@ if __name__ == "__main__":
     for im in imgs:
         img_loc.append(os.path.join(test_image_path,im))
 
+
+    proposed_tables = 0
+    correct_tables = 0
     for i_num, i in enumerate(img_loc):
         print("Detecting ", i)
         if i[92] == 'b':
             num = 'b'+i[102:-4]
+            xml_filename = "train_bound_xml_"+num[1:]+".xml"
+            xml_folder ="xml_bound_train"
         else:
             num = 'f'+i[101:-4]
+            xml_filename = "train_full_xml_"+num[1:]+".xml"
+            xml_folder ="xml_full_train"
         all_y,all_x = cnn_detect(model1,model2,i)
         if num in processed_tables:
             yolo_tables = processed_tables[num]
@@ -295,12 +321,75 @@ if __name__ == "__main__":
                 cnn_coords = [all_x[i][0],all_y[i][0],all_x[i][1],all_y[i][1]]
                 final_tables.append(cnn_coords)
 
-        for table in final_tables: #draw final rectangles
-            top_left = (table[0],table[1])
-            bot_right = (table[2],table[3])
+                '''
+                cv2.rectangle(img, (cnn_coords[0],cnn_coords[1]), (cnn_coords[2],cnn_coords[3]),(0,255,0),3)
 
-            cv2.rectangle(img,top_left,bot_right,(255,0,0),3)
+                img = cv2.resize(img,(600,800))
+                cv2.imshow('image',img)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+                img = cv2.resize(img,(width,height))
+                '''
+
+
+        for table in final_tables: #draw final rectangles
+            #top_left = (table[0],table[1])
+            #bot_right = (table[2],table[3])
+
+
+            proposed_tables+=1
+            maxIOU = 0
+            with open(os.path.join(test_xml_path,xml_folder,xml_filename),'r') as xml:
+
+                tree = ET.parse(xml)
+                root = tree.getroot()
+
+                for child in root:
+                    points = child[0].attrib["points"]
+                    xml_locs = get_coordinates(points)
+
+                    iou = calc_IoU(xml_locs,table)
+                    if iou > maxIOU:
+                        maxIOU = iou
+            if maxIOU > 0.7:
+                correct_tables+=1
+
+
+
+
+
+            #cv2.rectangle(img,top_left,bot_right,(255,0,0),3)
+
+        '''
         img=cv2.resize(img, (600,800))
         cv2.imshow('image',img)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+        '''
+
+    #count True
+    #count ground truth tables
+    num_tables_xml=0
+    for img in img_loc:
+        if img[92] == 'b': #if bound
+            num = img[102:-4]
+            xml_filename = "train_bound_xml_"+num+".xml"
+            xml_folder ="xml_bound_train"
+        else: #if full
+            num = img[101:-4]
+            xml_filename = "train_full_xml_"+num+".xml"
+            xml_folder ="xml_full_train"
+
+
+        with open(os.path.join(test_xml_path,xml_folder,xml_filename),'r') as xml:
+            tree = ET.parse(xml)
+            root = tree.getroot()
+            for table in root:
+                num_tables_xml=num_tables_xml+1
+
+    print("PROPOSED TABLES: ", proposed_tables)
+    print("CORRECT TABLES: ", correct_tables)
+    print("TRUE TABLES: ",num_tables_xml)
+
+    print("PRECISION: ", correct_tables/proposed_tables)
+    print("RECALL: ", correct_tables/num_tables_xml)
